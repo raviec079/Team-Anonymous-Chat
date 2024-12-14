@@ -89,7 +89,3 @@ def handle_message(data):
         emit('receive_message', {'message': message, 'sender': 'Team H2O member'}, broadcast=True)
     else:
         emit('receive_message', {'message': f'(Private) {message}', 'sender': 'Team H2O member'}, room=receiver)
-
-if __name__ == '__main__':
-    init_db()
-    socketio.run(app, debug=True)
