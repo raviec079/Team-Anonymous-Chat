@@ -1,5 +1,4 @@
 Flask
 Flask-SocketIO
 gunicorn
-sqlite3
 eventlet
