@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anonymous Chat</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        #chat-container {
+            width: 80%;
+            max-width: 600px;
+            border: 1px solid #ccc;
+            background: #ffffff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        #messages {
+            height: 400px;
+            overflow-y: auto;
+            padding: 15px;
+            background-color: #f9f9fb;
+        }
+
+        .message {
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #e1f5fe;
+            border-radius: 8px;
+            font-size: 14px;
+            word-wrap: break-word;
+        }
+
+        .message p {
+            margin: 0;
+            color: #333;
+        }
+
+        .message.private {
+            background-color: #ffecb3;
+        }
+
+        #input-container {
+            display: flex;
+            padding: 10px;
+            background-color: #f4f4f9;
+            border-top: 1px solid #ccc;
+        }
+
+        #input {
+            flex: 1;
+            padding: 10px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        #send-btn {
+            background-color: #2196f3;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin-left: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #send-btn:hover {
+            background-color: #1976d2;
+        }
+    </style>
+</head>
+<body>
+    <div id="chat-container">
+        <div id="messages"></div>
+        <div id="input-container">
+            <input id="input" type="text" placeholder="Type a message... (Use @username for private messages)" />
+            <button id="send-btn">Send</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const messagesDiv = document.getElementById('messages');
+        const input = document.getElementById('input');
+        const sendBtn = document.getElementById('send-btn');
+
+        const userName = prompt("Enter your username:");
+        socket.emit('join', { sender: userName });
+
+        socket.on('receive_message', (data) => {
+            const div = document.createElement('div');
+            div.classList.add('message');
+            if (data.message.startsWith('(Private)')) {
+                div.classList.add('private');
+            }
+            div.innerHTML = `<p><strong>${data.sender}:</strong> ${data.message}</p>`;
+            messagesDiv.appendChild(div);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        });
+
+
+        sendBtn.addEventListener('click', sendMessage);
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        function sendMessage() {
+            const message = input.value.trim();
+            if (message) {
+                const receiver = message.startsWith('@') ? message.split(' ')[0].substring(1) : 'everyone';
+                socket.emit('send_message', { sender: userName, message, receiver });
+                input.value = '';
+            }
+        }
+
+        socket.on('load_messages', (messages) => {
+            messages.forEach((data) => {
+                const div = document.createElement('div');
+                div.classList.add('message');
+                div.innerHTML = `<p><strong>${data.sender}:</strong> ${data.message}</p>`;
+                messagesDiv.appendChild(div);
+            });
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        });
+    </script>
+</body>
+</html>
