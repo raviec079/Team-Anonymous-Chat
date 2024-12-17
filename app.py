@@ -8,20 +8,39 @@ socketio = SocketIO(app)
 
 DB_FILE = 'chat.db'
 
-# Initialize the database
-def init_db():
-    with sqlite3.connect(DB_FILE) as conn:
-        c = conn.cursor()
-        # Create a central table to track users
-        c.execute('''CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, username TEXT UNIQUE)''')
-        conn.commit()
+def initialize_database():
+    conn = sqlite3.connect(DB_FILE)  # Ensure this matches your database file
+    c = conn.cursor()
+    # Create the `users` table if it doesn't exist
+    c.execute('''
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE,
+        pin TEXT NOT NULL
+    )
+    ''')
+    conn.commit()
+    conn.close()
 
-# Register a new user in the users table
-def register_user(username):
+initialize_database()
+
+
+# Validate user or register a new user
+def validate_or_register_user(username, pin):
     with sqlite3.connect(DB_FILE) as conn:
         c = conn.cursor()
-        c.execute('''INSERT OR IGNORE INTO users (username) VALUES (?)''', (username,))
-        conn.commit()
+        # Check if user exists
+        c.execute('SELECT pin FROM users WHERE username = ?', (username,))
+        row = c.fetchone()
+        if row:
+            # User exists, validate the PIN
+            stored_pin = row[0]
+            return stored_pin == pin
+        else:
+            # New user, register with the given PIN
+            c.execute('INSERT INTO users (username, pin) VALUES (?, ?)', (username, pin))
+            conn.commit()
+            return True  # New user registered successfully
 
 # Create a table for storing messages for a specific user
 def create_user_table(username):
@@ -54,10 +73,17 @@ def index():
 @socketio.on('join')
 def on_join(data):
     sender = data['sender']
+    pin = data['pin']
+
+    # Validate or register the user
+    is_valid = validate_or_register_user(sender, pin)
+    if not is_valid:
+        emit('error', {'message': 'Invalid PIN. Please try again.'})
+        return
+    
     join_room(sender)
 
     # Register the user and create a table for storing their messages
-    register_user(sender)
     create_user_table(sender)
 
     # Fetch and send the user's message history
