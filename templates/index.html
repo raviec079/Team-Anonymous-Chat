@@ -96,8 +96,23 @@
         const input = document.getElementById('input');
         const sendBtn = document.getElementById('send-btn');
 
-        const userName = prompt("Enter your username:");
-        socket.emit('join', { sender: userName });
+
+        let userName, userPin;
+        // Get username and PIN
+        while (!userName || !userPin || !/^\d{4}$/.test(userPin)) {
+            userName = prompt("Enter your username:");
+            userPin = prompt("Enter your 4-digit PIN:");
+            if (!/^\d{4}$/.test(userPin)) {
+                alert("PIN must be exactly 4 digits. Try again.");
+            }
+        }
+
+        socket.emit('join', { sender: userName, pin: userPin });
+
+        socket.on('error', (data) => {
+            alert(data.message);
+            window.location.reload();
+        });
 
         socket.on('receive_message', (data) => {
             const div = document.createElement('div');
